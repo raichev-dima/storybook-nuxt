@@ -1,63 +1,28 @@
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
-import type { PresetProperty } from '@storybook/types'
-import { type UserConfig as ViteConfig, mergeConfig, searchForWorkspaceRoot } from 'vite'
+import { dirname, join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import type { Nuxt } from '@nuxt/schema'
-import vuePlugin from '@vitejs/plugin-vue'
 
 import replace from '@rollup/plugin-replace'
+import type { PresetProperty } from '@storybook/types'
+import { type UserConfig as ViteConfig, mergeConfig, searchForWorkspaceRoot } from 'vite'
 import type { StorybookConfig } from './types'
-import { pluginsDir } from './dirs'
-
-const packageDir = resolve(fileURLToPath(
-  import.meta.url), '../..')
-const distDir = resolve(fileURLToPath(
-  import.meta.url), '../..', 'dist')
-const runtimeDir = resolve(distDir, 'runtime')
-
-const componentsDir = resolve(runtimeDir, 'components')
-const composablesDir = resolve(runtimeDir, 'composables')
-
-const dirs = [distDir, packageDir, componentsDir, composablesDir, runtimeDir]
+import { dirs, packageDir } from './dirs'
 
 let nuxt: Nuxt
 
-/**
- * extend nuxt-link component to use storybook router
- * @param nuxt
- */
-function extendComponents(nuxt: Nuxt) {
-  nuxt.hook('components:extend', (components: any) => {
-    const nuxtLink = components.find(({ name }: any) => name === 'NuxtLink')
-    nuxtLink.filePath = join(runtimeDir, 'components/nuxt-link')
-    nuxtLink.shortPath = join(runtimeDir, 'components/nuxt-link')
-    nuxt.options.build.transpile.push(nuxtLink.filePath)
-  })
-}
-
-/**
- * extend composables to override router ( fix undefined router  useNuxtApp )
- *
- * @param nuxt
- * */
-
-async function extendComposables(nuxt: Nuxt) {
-  const { addImportsSources } = await import('@nuxt/kit')
-  nuxt.options.build.transpile.push(composablesDir)
-  addImportsSources({ imports: ['useRouter'], from: join(composablesDir, 'router') })
-}
-
 async function defineNuxtConfig(baseConfig: Record<string, any>) {
-  const { loadNuxt, buildNuxt, addPlugin, extendPages } = await import('@nuxt/kit')
+  const { loadNuxt, buildNuxt, extendPages } = await import('@nuxt/kit')
 
   nuxt = await loadNuxt({
-    rootDir: baseConfig.root,
     ready: false,
-    dev: false,
+    dev: true,
 
     overrides: {
       ssr: false,
+      typescript: {
+        typeCheck: false,
+      },
     },
   })
 
@@ -65,36 +30,25 @@ async function defineNuxtConfig(baseConfig: Record<string, any>) {
     throw new Error(`Storybook-Nuxt does not support '${nuxt.options.builder}' for now.`)
 
   let extendedConfig: ViteConfig = {}
-  nuxt.options.build.transpile.push(join(packageDir, 'preview'))
 
   nuxt.hook('modules:done', () => {
-    extendComposables(nuxt)
-    // Override nuxt-link component to use storybook router
-    extendComponents(nuxt)
-    // nuxt.options.build.transpile.push('@storybook-vue/nuxt')
-    addPlugin({
-      src: join(pluginsDir, 'storybook'),
-      mode: 'client',
-    })
     // Add iframe page
     extendPages((pages: any) => {
       pages.push({
         name: 'storybook-iframe',
         path: '/iframe.html',
+        alias: ['/iframe.html'],
       })
     })
 
     nuxt.hook(
-      'vite:extendConfig',
+      'vite:configResolved',
       (
         config: ViteConfig | PromiseLike<ViteConfig> | Record<string, any>,
         { isClient }: any,
       ) => {
         if (isClient) {
-          const plugins = baseConfig.plugins.filter((plugin: any) => plugin.name !== 'vite:vue')
-          baseConfig.plugins = [...plugins,
-            vuePlugin(),
-          ]
+          baseConfig.plugins = baseConfig.plugins.filter((plugin: any) => plugin.name !== 'vite:vue')
           extendedConfig = mergeConfig(config, baseConfig)
         }
       },
@@ -105,8 +59,6 @@ async function defineNuxtConfig(baseConfig: Record<string, any>) {
 
   try {
     await buildNuxt(nuxt)
-
-    nuxt.options.dev = true
 
     return {
       viteConfig: extendedConfig,
@@ -138,7 +90,6 @@ export const viteFinal: StorybookConfig['viteFinal'] = async (
   options: any,
 ) => {
   const getStorybookViteConfig = async (c: Record<string, any>, o: any) => {
-    // const pkgPath = await getPackageDir('@storybook/vue3-vite')
     const presetURL = pathToFileURL(join(await getPackageDir('@storybook/vue3-vite'), 'preset.js'))
     const { viteFinal: ViteFile } = await import(presetURL.href)
 
@@ -174,9 +125,7 @@ async function getPackageDir(frameworkPackageName: any) {
 
   try {
     const require = createRequire(import.meta.url)
-    const packageDir = dirname(require.resolve(join(frameworkPackageName, 'package.json'), { paths: [process.cwd()] }))
-
-    return packageDir
+    return dirname(require.resolve(join(frameworkPackageName, 'package.json'), { paths: [process.cwd()] }))
   }
   catch (e) {
     // logger.error(e)

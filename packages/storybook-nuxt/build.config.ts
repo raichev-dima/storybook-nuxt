@@ -32,8 +32,6 @@ export default defineBuildConfig({
     '@vue/shared',
     '@unhead/vue',
     '@nuxt/devtools-kit',
-    '#app/composables/state',
-    '#app/entry',
     '#build/plugins',
   ],
   failOnWarn: false,

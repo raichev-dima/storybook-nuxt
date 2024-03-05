@@ -29,10 +29,9 @@ export default defineBuildConfig({
     'vue',
     '@storybook/types',
     '@storybook/vue3',
-    '@vue/shared',
-    '@unhead/vue',
-    '@nuxt/devtools-kit',
     '#build/plugins',
+    'unctx',
+    'nuxt-storybook-vue-runtime-config.json',
   ],
   failOnWarn: false,
 })

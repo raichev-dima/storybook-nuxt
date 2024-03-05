@@ -8,11 +8,12 @@ import type { PresetProperty } from '@storybook/types'
 import { type UserConfig as ViteConfig, mergeConfig, searchForWorkspaceRoot } from 'vite'
 import type { StorybookConfig } from './types'
 import { dirs, packageDir } from './dirs'
+import nuxtRuntimeConfigPlugin from './vite/nuxtRuntimeConfigPlugin'
 
 let nuxt: Nuxt
 
 async function defineNuxtConfig(baseConfig: Record<string, any>) {
-  const { loadNuxt, buildNuxt, extendPages } = await import('@nuxt/kit')
+  const { loadNuxt, buildNuxt, addVitePlugin } = await import('@nuxt/kit')
 
   nuxt = await loadNuxt({
     ready: false,
@@ -23,6 +24,9 @@ async function defineNuxtConfig(baseConfig: Record<string, any>) {
       typescript: {
         typeCheck: false,
       },
+      experimental: {
+        appManifest: false,
+      },
     },
   })
 
@@ -32,14 +36,7 @@ async function defineNuxtConfig(baseConfig: Record<string, any>) {
   let extendedConfig: ViteConfig = {}
 
   nuxt.hook('modules:done', () => {
-    // Add iframe page
-    extendPages((pages: any) => {
-      pages.push({
-        name: 'storybook-iframe',
-        path: '/iframe.html',
-        alias: ['/iframe.html'],
-      })
-    })
+    addVitePlugin(nuxtRuntimeConfigPlugin.vite({ content: JSON.stringify(nuxt.options.runtimeConfig.public) }), { prepend: true })
 
     nuxt.hook(
       'vite:configResolved',
@@ -100,7 +97,6 @@ export const viteFinal: StorybookConfig['viteFinal'] = async (
   const nuxtConfig = await defineNuxtConfig(await getStorybookViteConfig(config, options))
 
   return mergeConfig(nuxtConfig.viteConfig, {
-    // build: { rollupOptions: { external: ['vue', 'vue-demi'] } },
     define: {
       '__NUXT__': JSON.stringify({ config: nuxtConfig.nuxt.options.runtimeConfig }),
       'import.meta.client': 'true',

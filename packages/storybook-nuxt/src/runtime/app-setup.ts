@@ -1,12 +1,16 @@
+import type { StoryContext } from '@storybook/vue3'
 import type { App } from 'h3'
 import { createApp } from 'h3'
 import { applyPlugins, createNuxtApp } from 'nuxt/app'
+import { getContext } from 'unctx'
 
 import { createFetch } from 'ofetch'
 import type { App as VueApp } from 'vue'
 import { nextTick } from 'vue'
 
-export async function setupNuxtApp(vueApp: VueApp) {
+export async function setupNuxtApp(vueApp: VueApp, storyContext?: StoryContext) {
+  // @ts-expect-error virtual file
+  const runtimeConfig = await import('nuxt-storybook-vue-runtime-config.json')
   const win = window as unknown as Window & {
     __app: App
     __registry: Set<string>
@@ -20,7 +24,7 @@ export async function setupNuxtApp(vueApp: VueApp) {
   win.__NUXT__ = {
     serverRendered: false,
     config: {
-      public: {},
+      public: runtimeConfig,
       app: { baseURL: '/' },
     },
     data: {},
@@ -45,7 +49,9 @@ export async function setupNuxtApp(vueApp: VueApp) {
   win.__app = h3App
 
   async function initApp() {
-    const nuxt = createNuxtApp({ vueApp })
+    const nuxt = createNuxtApp({ vueApp, globalName: `nuxt-${storyContext?.id || ''}` })
+
+    getContext('nuxt-app').set(nuxt, true)
     try {
       // @ts-expect-error virtual file
       const plugins = await import ('#build/plugins')

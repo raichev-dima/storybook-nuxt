@@ -8,17 +8,15 @@ import type { PresetProperty } from '@storybook/types'
 import { type UserConfig as ViteConfig, mergeConfig, searchForWorkspaceRoot } from 'vite'
 import type { StorybookConfig } from './types'
 import { dirs, packageDir } from './dirs'
-import nuxtRuntimeConfigPlugin from './vite/nuxtRuntimeConfigPlugin'
 
 let nuxt: Nuxt
 
 async function defineNuxtConfig(baseConfig: Record<string, any>) {
-  const { loadNuxt, buildNuxt, addVitePlugin } = await import('@nuxt/kit')
+  const { loadNuxt, buildNuxt } = await import('@nuxt/kit')
 
   nuxt = await loadNuxt({
     ready: false,
     dev: true,
-
     overrides: {
       ssr: false,
       typescript: {
@@ -36,8 +34,6 @@ async function defineNuxtConfig(baseConfig: Record<string, any>) {
   let extendedConfig: ViteConfig = {}
 
   nuxt.hook('modules:done', () => {
-    addVitePlugin(nuxtRuntimeConfigPlugin.vite({ content: JSON.stringify(nuxt.options.runtimeConfig.public) }), { prepend: true })
-
     nuxt.hook(
       'vite:configResolved',
       (
@@ -117,8 +113,6 @@ export const viteFinal: StorybookConfig['viteFinal'] = async (
 }
 
 async function getPackageDir(frameworkPackageName: any) {
-  //   const packageJsonPath = join(frameworkPackageName, 'package.json')
-
   try {
     const require = createRequire(import.meta.url)
     return dirname(require.resolve(join(frameworkPackageName, 'package.json'), { paths: [process.cwd()] }))
@@ -126,5 +120,6 @@ async function getPackageDir(frameworkPackageName: any) {
   catch (e) {
     // logger.error(e)
   }
-  throw new Error(`Cannot find ${frameworkPackageName},`)
+
+  throw new Error(`Cannot find ${frameworkPackageName}`)
 }

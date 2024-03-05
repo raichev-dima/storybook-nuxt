@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v0.2.5
+
+[compare changes](https://github.com/raichev-dima/storybook-nuxt/compare/v0.2.3...v0.2.5)
+
+### 🩹 Fixes
+
+- Add runtime config ([84109e0](https://github.com/raichev-dima/storybook-nuxt/commit/84109e0))
+- Clean up redundant code ([b4b8182](https://github.com/raichev-dima/storybook-nuxt/commit/b4b8182))
+
+### ❤️ Contributors
+
+- Raichev-dima ([@raichev-dima](http://github.com/raichev-dima))
+
 ## v0.2.3
 
 [compare changes](https://github.com/raichev-dima/storybook-nuxt/compare/v0.2.3-alpha.15...v0.2.3)
